@@ -1,6 +1,6 @@
 "use client"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, BookOpen, User, Settings, HelpCircle, Bell } from "lucide-react"
+import { X, User, Settings, HelpCircle, Bell, Trophy, Award } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface AccountMenuProps {
@@ -18,9 +18,14 @@ export function AccountMenu({ isOpen, onClose }: AccountMenuProps) {
       path: "/profile",
     },
     {
-      icon: BookOpen,
-      label: "Learning Hub",
-      path: "/learning-hub",
+      icon: Trophy,
+      label: "Leaderboard",
+      path: "/leaderboard",
+    },
+    {
+      icon: Award,
+      label: "Trophy Room",
+      path: "/trophy-room",
     },
     {
       icon: Bell,

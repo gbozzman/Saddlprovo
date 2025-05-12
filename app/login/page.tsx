@@ -44,13 +44,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center space-y-4">
-          <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-01-15%20at%2018.21.08-PVNqphs6dbCNv6JOsEM0SpYficsB8n.png"
-            alt="SaddlePro Logo"
-            width={200}
-            height={80}
-            className="w-48"
-          />
+          <Image src="/images/saddlepro-logo-new.png" alt="SaddlePro Logo" width={250} height={120} className="w-64" />
           <h1 className="text-2xl font-bold text-white">Welcome to SaddlePro</h1>
         </div>
 
@@ -140,6 +134,12 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
+      </div>
+
+      {/* Copyright Footer */}
+      <div className="mt-12 text-center text-white/70 text-xs space-y-1 px-4">
+        <p>© 2025 SaddlePro™. All rights reserved.</p>
+        <p>SaddlePro™ and SaddlePro Intelligence Engine™ are trade marks of Saddlepro Ltd. All rights reserved.</p>
       </div>
     </main>
   )

@@ -1,175 +1,308 @@
 "use client"
 
-import { useSearchParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { RefreshCw, Loader2 } from "lucide-react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { mockRaces } from "@/data/mock-races"
-import type { Horse } from "@/types/horse"
-import Logo from "@/components/logo"
-import { RaceSummary } from "@/components/RaceSummary"
+import { fetchRaceDetails, fetchRaceRunners } from "@/services/raceService"
+import type { LiveRace, LiveRaceRunner } from "@/lib/supabase"
 import { HorseRankingBar } from "@/app/components/HorseRankingBar"
-import { Suspense } from "react"
+import { DraggableHorseList } from "@/components/DraggableHorseList"
+import { RaceSummary } from "@/components/RaceSummary"
+import { BottomNavBar } from "@/components/BottomNavBar"
+import { ChevronLeft, AlertCircle, Filter, SortDesc, SortAsc, Award, Layers, Trophy } from "lucide-react"
+import Logo from "@/components/logo"
 
-function ResultsContent() {
-  const router = useRouter()
+export default function ResultsPage() {
   const searchParams = useSearchParams()
-  const [horses, setHorses] = useState<Horse[]>([])
-  const [isExiting, setIsExiting] = useState(false)
-  const [isRaceSummaryExpanded, setIsRaceSummaryExpanded] = useState(false)
+  const router = useRouter()
 
-  const searchQuery = searchParams.get("horse") || ""
-  const selectedRace = searchParams.get("race") || ""
-  const selectedDate = searchParams.get("date") || ""
-  const selectedTime = searchParams.get("time") || ""
+  const courseId = searchParams.get("course") || ""
+  const date = searchParams.get("date") || ""
+  const time = searchParams.get("time") || ""
+
+  const [race, setRace] = useState<LiveRace | null>(null)
+  const [runners, setRunners] = useState<LiveRaceRunner[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedHorse, setSelectedHorse] = useState<LiveRaceRunner | null>(null)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  const [filterLabel, setFilterLabel] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"ranking" | "prediction">("ranking")
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+
+  // Mock user ID - in a real app, this would come from authentication
+  const userId = "user123"
 
   useEffect(() => {
-    let filteredHorses: Horse[] = []
-
-    if (selectedRace) {
-      const raceData = mockRaces.find((race) => race.name.toLowerCase() === selectedRace.toLowerCase())
-      if (raceData) {
-        filteredHorses = [...raceData.horses]
+    const loadRaceData = async () => {
+      if (!courseId || !date || !time) {
+        setError("Missing race parameters")
+        setIsLoading(false)
+        return
       }
-    } else {
-      filteredHorses = mockRaces.flatMap((race) => race.horses)
-    }
 
-    if (searchQuery) {
-      filteredHorses = filteredHorses.filter((horse) => horse.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    }
+      try {
+        setIsLoading(true)
+        setError(null)
 
-    const sortedHorses = filteredHorses.sort((a, b) => b.score - a.score)
-    setHorses(sortedHorses)
-  }, [searchQuery, selectedRace])
+        // Fetch race details
+        const raceData = await fetchRaceDetails(courseId, date, time)
+        if (!raceData) {
+          throw new Error("Race not found")
+        }
+        setRace(raceData)
 
-  const handleReset = () => {
-    setIsExiting(true)
-    setTimeout(() => {
-      router.push("/")
-    }, 300)
-  }
+        // Fetch runners for this race
+        console.log("Fetching runners for race ID:", raceData.race_id)
+        const runnersData = await fetchRaceRunners(raceData.race_id)
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Not specified"
-    const date = new Date(dateString)
-    const day = date.getDate().toString().padStart(2, "0")
-    const month = (date.getMonth() + 1).toString().padStart(2, "0")
-    const year = date.getFullYear()
-    return `${day}-${month}-${year}`
-  }
+        if (!runnersData || runnersData.length === 0) {
+          console.warn("No runners found for this race, using mock data")
+          // If no runners found, we'll use mock data (handled in fetchRaceRunners)
+        }
 
-  const getRaceClass = (raceName: string) => {
-    const raceClasses: { [key: string]: string } = {
-      Newcastle: "Class 5",
-      Ascot: "Class 1",
-      Cheltenham: "Class 2",
-      Dundalk: "Class 3",
-      Aintree: "Class 1",
-    }
-    return raceClasses[raceName] || "Unknown"
-  }
+        setRunners(runnersData)
 
-  const summarizeScores = (horses: Horse[]) => {
-    if (horses.length === 0) {
-      return {
-        summary: "No horses found for this race. Please adjust your search criteria.",
-        averageScore: 0,
-        lowestScore: 0,
-        highestScore: 0,
+        // Select the top horse by default
+        if (runnersData.length > 0) {
+          setSelectedHorse(runnersData[0])
+        }
+      } catch (err: any) {
+        console.error("Failed to load race data:", err)
+        setError(err?.message || "Failed to load race data")
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    const totalHorses = horses.length
-    const averageScore = horses.reduce((sum, horse) => sum + horse.score, 0) / totalHorses
-    const highestScore = Math.max(...horses.map((horse) => horse.score))
-    const lowestScore = Math.min(...horses.map((horse) => horse.score))
-    const topContender = horses[0]
+    loadRaceData()
+  }, [courseId, date, time])
 
-    const competitionLevel =
-      averageScore > 85 ? "highly competitive" : averageScore > 75 ? "competitive" : "varied in quality"
-    const scoreRange = highestScore - lowestScore
-    const rangeDescription = scoreRange > 20 ? "wide range" : scoreRange > 10 ? "moderate range" : "narrow range"
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showFilterDropdown) {
+        setShowFilterDropdown(false)
+      }
+    }
 
-    return {
-      summary: `This ${competitionLevel} race features ${totalHorses} horses with an average score of ${averageScore.toFixed(1)}. 
-The field shows a ${rangeDescription} of abilities, with scores spanning from ${lowestScore} to an impressive ${highestScore}. 
-${topContender.name} leads the field with a remarkable score of ${topContender.score}, making it the top pick for this race. 
-Spectators can expect ${scoreRange > 15 ? "an unpredictable and exciting" : "a closely matched"} contest, 
-with ${averageScore > 80 ? "several strong contenders vying for the top spot" : "a mix of experienced runners and potential underdogs"}.`,
-      averageScore,
-      lowestScore,
-      highestScore,
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showFilterDropdown])
+
+  const handleSortToggle = () => {
+    setSortOrder(sortOrder === "desc" ? "asc" : "desc")
+  }
+
+  const handleFilterChange = (label: string | null) => {
+    setFilterLabel(label)
+    setShowFilterDropdown(false)
+  }
+
+  const handleSubmitPrediction = async (predictedHorses: LiveRaceRunner[]) => {
+    if (!race) return
+
+    try {
+      // In a real app, you would save the prediction to your database
+      console.log(
+        "Prediction submitted:",
+        predictedHorses.map((h) => h.horse_name),
+      )
+
+      // Show success message or redirect
+    } catch (err) {
+      console.error("Failed to save prediction:", err)
     }
   }
 
-  const { summary, averageScore, lowestScore, highestScore } = summarizeScores(horses)
-  const showRaceSummary = selectedRace !== "" // Only show race summary when a race is selected
+  const filteredRunners = filterLabel ? runners.filter((runner) => runner.label === filterLabel) : runners
+
+  const sortedRunners = [...filteredRunners].sort((a, b) => {
+    return sortOrder === "desc" ? b.normalized_score - a.normalized_score : a.normalized_score - b.normalized_score
+  })
+
+  const getFilterOptions = () => {
+    const labels = new Set(runners.map((runner) => runner.label))
+    return Array.from(labels)
+  }
+
+  // Calculate average, lowest, and highest scores
+  const averageScore =
+    runners.length > 0 ? runners.reduce((sum, runner) => sum + runner.normalized_score, 0) / runners.length : 0
+
+  const lowestScore = runners.length > 0 ? Math.min(...runners.map((runner) => runner.normalized_score)) : 0
+
+  const highestScore = runners.length > 0 ? Math.max(...runners.map((runner) => runner.normalized_score)) : 0
+
+  // Get the top horse name
+  const topHorseName =
+    runners.length > 0 ? runners.sort((a, b) => b.normalized_score - a.normalized_score)[0].horse_name : "Top contender"
 
   return (
-    <main className="flex flex-col items-center w-full min-h-screen bg-[#183531] pb-20">
-      <motion.div initial={{ opacity: 1 }} animate={{ opacity: isExiting ? 0 : 1 }} transition={{ duration: 0.3 }}>
-        <div className="w-full max-w-2xl px-4 py-6 pb-16">
-          <Logo />
+    <main className="flex flex-col min-h-screen bg-[#183531] pb-20">
+      <div className="w-full max-w-2xl px-4 py-6 mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={() => router.back()} className="text-white hover:text-[#DDAD69] transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <div className="flex-grow flex justify-center">
+            <Logo />
+          </div>
+          <div className="w-6"></div> {/* Empty div for balance */}
+        </div>
 
-          <div className="mt-8 space-y-8">
-            {/* Race Summary - only shown when a race is selected */}
-            {showRaceSummary && (
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-md mb-6 flex items-start">
+            <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Error loading race data</p>
+              <p className="text-sm mt-1">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="w-12 h-12 border-4 border-[#DDAD69] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white">Loading race data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Race Summary */}
+            {race && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-white rounded-xl p-6 shadow-lg mb-8"
+                className="mb-6"
               >
                 <RaceSummary
-                  track={selectedRace || "All Tracks"}
-                  raceClass={getRaceClass(selectedRace)}
-                  date={formatDate(selectedDate)}
-                  time={selectedTime || "Not specified"}
-                  summary={summary}
+                  track={race.course || "Unknown"}
+                  raceClass={race.race_class || "Unknown"}
+                  date={date || "Not specified"}
+                  time={time || "Not specified"}
+                  summary=""
                   averageScore={averageScore}
                   lowestScore={lowestScore}
                   highestScore={highestScore}
+                  topHorseName={topHorseName}
                 />
               </motion.div>
             )}
 
-            <HorseRankingBar horses={horses} />
-          </div>
+            {/* View mode toggle */}
+            <div className="flex mb-4 bg-[#1d403c] rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("ranking")}
+                className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors ${
+                  viewMode === "ranking" ? "bg-[#DDAD69] text-white" : "text-gray-300 hover:text-white"
+                }`}
+              >
+                <Layers size={16} />
+                SaddlePro Ranking
+              </button>
+              <button
+                onClick={() => setViewMode("prediction")}
+                className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors ${
+                  viewMode === "prediction" ? "bg-[#DDAD69] text-white" : "text-gray-300 hover:text-white"
+                }`}
+              >
+                <Trophy size={16} />
+                Your Prediction
+              </button>
+            </div>
 
-          {horses.length === 0 && (
-            <div className="text-center text-white py-8">No results found. Try adjusting your search criteria.</div>
-          )}
+            {/* Controls - only show in ranking mode */}
+            {viewMode === "ranking" && runners.length > 0 && (
+              <div className="flex justify-between mb-4">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleSortToggle}
+                    className="flex items-center bg-[#1d403c] text-white px-3 py-2 rounded-md text-sm hover:bg-[#2a5751] transition-colors"
+                  >
+                    {sortOrder === "desc" ? (
+                      <>
+                        <SortDesc size={16} className="mr-1" /> Highest First
+                      </>
+                    ) : (
+                      <>
+                        <SortAsc size={16} className="mr-1" /> Lowest First
+                      </>
+                    )}
+                  </button>
+                </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: horses.length * 0.1 }}
-          >
-            <button
-              onClick={handleReset}
-              className="w-full py-3 mt-6 mb-2 bg-[#DDAD69] text-white rounded-xl hover:bg-[#C59C5F] transition-colors text-base font-medium flex items-center justify-center gap-2"
-            >
-              <RefreshCw size={20} />
-              Back to Search
-            </button>
-          </motion.div>
-        </div>
-      </motion.div>
-      <div className="w-full max-w-2xl px-4 mt-8 mb-4">
-        <p className="text-sm text-gray-400 text-center">
-          This information is accurate as of {new Date().toLocaleString()}. Horse withdrawals and lineup changes may
-          occur after this time.
-        </p>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                    className="flex items-center bg-[#1d403c] text-white px-3 py-2 rounded-md text-sm hover:bg-[#2a5751] transition-colors"
+                  >
+                    <Filter size={16} className="mr-1" />
+                    {filterLabel ? filterLabel.split(" ")[0] : "All Horses"}
+                  </button>
+
+                  {showFilterDropdown && (
+                    <div className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg z-10 w-48 overflow-hidden">
+                      <button
+                        onClick={() => handleFilterChange(null)}
+                        className={`w-full text-left px-4 py-2 text-sm ${
+                          !filterLabel ? "bg-[#DDAD69] text-white" : "text-gray-800 hover:bg-gray-100"
+                        }`}
+                      >
+                        All Horses
+                      </button>
+                      {getFilterOptions().map((label) => (
+                        <button
+                          key={label}
+                          onClick={() => handleFilterChange(label)}
+                          className={`w-full text-left px-4 py-2 text-sm ${
+                            filterLabel === label ? "bg-[#DDAD69] text-white" : "text-gray-800 hover:bg-gray-100"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Horse list */}
+            {runners.length > 0 ? (
+              <div className="space-y-4">
+                {viewMode === "ranking" ? (
+                  <HorseRankingBar horses={sortedRunners} />
+                ) : (
+                  <DraggableHorseList horses={sortedRunners} onSubmitPrediction={handleSubmitPrediction} />
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl p-6 shadow-md text-center">
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Award className="w-12 h-12 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">No Horses Available</h3>
+                  <p className="text-gray-500">
+                    There are no horses to display for this race. Please try selecting a different race.
+                  </p>
+                  <button
+                    onClick={() => router.push("/search")}
+                    className="mt-6 px-4 py-2 bg-[#DDAD69] text-white rounded-md hover:bg-[#C59C5F] transition-colors"
+                  >
+                    Back to Search
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
+      <BottomNavBar />
     </main>
-  )
-}
-
-export default function ResultsPage() {
-  return (
-    <Suspense fallback={<Loader2 className="animate-spin h-8 w-8 text-[#DDAD69]" />}>
-      <ResultsContent />
-    </Suspense>
   )
 }

@@ -12,6 +12,7 @@ interface RaceSummaryProps {
   averageScore: number
   lowestScore: number
   highestScore: number
+  topHorseName?: string
 }
 
 export function RaceSummary({
@@ -23,8 +24,8 @@ export function RaceSummary({
   averageScore,
   lowestScore,
   highestScore,
+  topHorseName = "Top contender",
 }: RaceSummaryProps) {
-  const [isExpanded] = useState(true)
   const [tooltipVisible, setTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -51,38 +52,87 @@ export function RaceSummary({
     setTooltipVisible(!tooltipVisible)
   }
 
+  // Format date to dd-mm-yyyy
+  const formatDate = (dateString: string) => {
+    if (dateString === "Not specified") return dateString
+
+    try {
+      // Check if date is already in dd-mm-yyyy format
+      if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) return dateString
+
+      // Parse the date string
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return dateString
+
+      // Format as dd-mm-yyyy
+      const day = date.getDate().toString().padStart(2, "0")
+      const month = (date.getMonth() + 1).toString().padStart(2, "0")
+      const year = date.getFullYear()
+
+      return `${day}-${month}-${year}`
+    } catch (e) {
+      return dateString
+    }
+  }
+
+  // Format time to show AM/PM
+  const formatTime = (timeString: string) => {
+    if (timeString === "Not specified") return timeString
+
+    try {
+      // Check if time is in HH:MM format
+      if (!/^\d{1,2}:\d{2}$/.test(timeString)) return timeString
+
+      const [hours, minutes] = timeString.split(":").map(Number)
+      const period = hours >= 12 ? "PM" : "AM"
+      const formattedHours = hours % 12 || 12
+
+      return `${formattedHours}:${minutes.toString().padStart(2, "0")} ${period}`
+    } catch (e) {
+      return timeString
+    }
+  }
+
+  // Generate a summary if one isn't provided
+  const generatedSummary =
+    summary ||
+    `This ${averageScore > 85 ? "highly competitive" : averageScore > 75 ? "competitive" : "varied"} race features horses with an average score of ${averageScore.toFixed(1)}. 
+The field shows a ${highestScore - lowestScore > 20 ? "wide" : highestScore - lowestScore > 10 ? "moderate" : "narrow"} range of abilities, with scores spanning from ${lowestScore} to an impressive ${highestScore}. 
+${topHorseName} leads the field with a remarkable score of ${highestScore}, making it the top pick for this race. 
+Spectators can expect ${highestScore - lowestScore > 15 ? "an unpredictable and exciting" : "a closely matched"} contest, 
+with ${averageScore > 80 ? "several strong contenders vying for the top spot" : "a mix of experienced runners and potential underdogs"}.`
+
   return (
-    <div className="bg-white rounded-xl p-6 mb-8 border-2 border-[#DDAD69] shadow-lg">
-      <div className="flex items-center mb-4">
-        <div className="flex items-center">
-          <Trophy className="w-6 h-6 mr-2 text-[#DDAD69]" />
-          <h2 className="text-2xl font-bold text-gray-900">Race Summary</h2>
-        </div>
+    <div className="bg-white rounded-xl p-6 border border-[#DDAD69]/30 shadow-md">
+      <div className="flex items-center mb-6">
+        <Trophy className="w-6 h-6 mr-3 text-[#DDAD69]" />
+        <h2 className="text-2xl font-bold text-gray-900">Race Summary</h2>
       </div>
-      {/* Always show content, no condition */}
+
       <div className="space-y-4 mb-6">
         <p className="flex items-center text-gray-700">
-          <FlagIcon className="w-6 h-6 mr-3 text-[#DDAD69]" />
+          <FlagIcon className="w-5 h-5 mr-3 text-[#DDAD69]" />
           <span className="font-semibold mr-2">Track:</span>
           <span>
             {track} {raceClass !== "Unknown" ? `(${raceClass})` : ""}
           </span>
         </p>
         <p className="flex items-center text-gray-700">
-          <CalendarIcon className="w-6 h-6 mr-3 text-[#DDAD69]" />
+          <CalendarIcon className="w-5 h-5 mr-3 text-[#DDAD69]" />
           <span className="font-semibold mr-2">Date:</span>
-          <span>{date}</span>
+          <span>{formatDate(date)}</span>
         </p>
         <p className="flex items-center text-gray-700">
-          <ClockIcon className="w-6 h-6 mr-3 text-[#DDAD69]" />
+          <ClockIcon className="w-5 h-5 mr-3 text-[#DDAD69]" />
           <span className="font-semibold mr-2">Time:</span>
-          <span>{time}</span>
+          <span>{formatTime(time)}</span>
         </p>
       </div>
+
       {averageScore > 0 && (
         <div className="mb-6">
           <div className="flex items-center mb-2 relative">
-            <p className="text-sm font-semibold text-gray-600 mr-2">
+            <p className="text-sm font-semibold text-gray-700 mr-2">
               SaddlePro Confidence Score (SCS): {(averageScore / 10).toFixed(1)}/10
             </p>
             <button
@@ -120,15 +170,16 @@ export function RaceSummary({
             <div className="bg-[#DDAD69] h-2.5 rounded-full" style={{ width: `${(averageScore / 100) * 100}%` }}></div>
           </div>
           {lowestScore > 0 && highestScore > 0 && (
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-700">
               Horse Range: <span className="text-orange-500 font-semibold">{lowestScore}</span> to{" "}
               <span className="text-green-500 font-semibold">{highestScore}</span>
             </p>
           )}
         </div>
       )}
+
       <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-gray-700 leading-relaxed">{summary}</p>
+        <p className="text-gray-700 leading-relaxed">{generatedSummary}</p>
       </div>
     </div>
   )

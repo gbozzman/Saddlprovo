@@ -1,104 +1,10 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { RefreshCw, ArrowLeft, Star } from "lucide-react"
 import type { Horse } from "@/types/horse"
-
-const silkPatterns = ["stripes", "stars", "solid", "checkered", "diamonds", "polkadots", "triangles", "zigzag"]
-
-const themeColors = [
-  "#DDAD69", // Gold
-  "#FFFFFF", // White
-  "#183531", // Dark Green
-  "#FF0000", // Red
-  "#0000FF", // Blue
-  "#FFA500", // Orange
-  "#FFFF00", // Yellow
-  "#FFC0CB", // Pink
-  "#800080", // Purple
-  "#A52A2A", // Brown
-]
-
-function SilkPlaceholder({
-  pattern,
-  primaryColor,
-  secondaryColor,
-}: { pattern: string; primaryColor: string; secondaryColor: string }) {
-  return (
-    <div
-      className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
-      style={{ backgroundColor: primaryColor }}
-    >
-      {pattern === "stripes" && (
-        <div className="w-full h-full">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-1/3"
-              style={{ backgroundColor: i % 2 === 0 ? secondaryColor : "transparent" }}
-            ></div>
-          ))}
-        </div>
-      )}
-      {pattern === "stars" && (
-        <div className="text-sm" style={{ color: secondaryColor }}>
-          ★
-        </div>
-      )}
-      {pattern === "solid" && <div className="w-full h-full" style={{ backgroundColor: secondaryColor }}></div>}
-      {pattern === "checkered" && (
-        <div className="w-full h-full grid grid-cols-3 grid-rows-3">
-          {[...Array(9)].map((_, i) => (
-            <div key={i} style={{ backgroundColor: i % 2 === 0 ? secondaryColor : "transparent" }}></div>
-          ))}
-        </div>
-      )}
-      {pattern === "diamonds" && (
-        <div className="w-full h-full relative">
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: secondaryColor, clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }}
-          ></div>
-        </div>
-      )}
-      {pattern === "polkadots" && (
-        <div className="w-full h-full relative">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full"
-              style={{
-                backgroundColor: secondaryColor,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-              }}
-            ></div>
-          ))}
-        </div>
-      )}
-      {pattern === "triangles" && (
-        <div className="w-full h-full relative">
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: secondaryColor, clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" }}
-          ></div>
-        </div>
-      )}
-      {pattern === "zigzag" && (
-        <div className="w-full h-full relative">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundColor: secondaryColor,
-              clipPath: "polygon(0 0, 100% 0, 100% 20%, 0 40%, 0 60%, 100% 80%, 100% 100%, 0 100%)",
-            }}
-          ></div>
-        </div>
-      )}
-    </div>
-  )
-}
+import { JerseyIcon } from "@/components/JerseyIcon"
 
 interface VerticalHorseCardProps {
   horse: Horse
@@ -154,7 +60,6 @@ const generatePersonalizedInsight = (horse: Horse) => {
     })
 
   const formAnalysis = analyzeForm(horse.form)
-  const trackName = "Newcastle" // This would be dynamically determined based on race context
 
   let insight = `${horse.name} is a ${personality} competitor `
 
@@ -164,14 +69,17 @@ const generatePersonalizedInsight = (horse: Horse) => {
     insight += `with balanced performance across all areas. `
   }
 
-  insight += `With ${horse.jockey} as jockey and ${horse.trainer}'s training regime, ${horse.name} shows particular promise at ${trackName}. `
+  insight += `With ${horse.jockey} as jockey and ${horse.trainer}'s training, ${horse.name} is a strong contender. `
   insight += formAnalysis
 
-  // Add track-specific context without algorithm references
   if (horse.performance.groundDurability > 80) {
-    insight += ` At ${trackName}, ${horse.name} demonstrates exceptional <span class="text-[#DDAD69] font-semibold">form momentum</span> and <span class="text-[#DDAD69] font-semibold">track affinity</span>, making it a strong contender on this course. `
-  } else if (horse.performance.jockeyPerformance > 85) {
-    insight += ` The strong synergy between ${horse.name} and ${horse.jockey} is particularly effective at this track, giving it an edge over competitors with less experienced jockeys. `
+    insight += ` With high ground durability, ${horse.name} is well-suited for various track conditions. `
+  } else if (horse.performance.groundDurability < 60) {
+    insight += ` ${horse.name} may struggle on challenging track conditions. `
+  }
+
+  if (horse.performance.jockeyPerformance > 85) {
+    insight += ` The strong synergy between ${horse.name} and ${horse.jockey} could be a decisive factor in this race. `
   }
 
   return insight
@@ -202,20 +110,6 @@ const getOrdinalSuffix = (n: number) => {
 export default function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
   const [isFlipped, setIsFlipped] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const horseSilk = useMemo(() => {
-    const patternIndex = Math.floor(Math.random() * silkPatterns.length)
-    const primaryColorIndex = Math.floor(Math.random() * themeColors.length)
-    let secondaryColorIndex
-    do {
-      secondaryColorIndex = Math.floor(Math.random() * themeColors.length)
-    } while (secondaryColorIndex === primaryColorIndex)
-
-    return {
-      pattern: silkPatterns[patternIndex],
-      primaryColor: themeColors[primaryColorIndex],
-      secondaryColor: themeColors[secondaryColorIndex],
-    }
-  }, [horse.id])
 
   useEffect(() => {
     // Check if the horse is in favorites when the component mounts
@@ -289,11 +183,7 @@ export default function VerticalHorseCard({ horse, rank }: VerticalHorseCardProp
           <div className="flex justify-between items-start mb-6">
             <div className="flex-grow">
               <div className="flex items-center gap-2 mb-2">
-                <SilkPlaceholder
-                  pattern={horseSilk.pattern}
-                  primaryColor={horseSilk.primaryColor}
-                  secondaryColor={horseSilk.secondaryColor}
-                />
+                <JerseyIcon horseId={horse.id} size="sm" />
                 <h2 className="text-2xl font-bold text-gray-900">{horse.name}</h2>
                 <span
                   className={`text-sm font-semibold px-2 py-1 rounded-full text-white ${
@@ -338,10 +228,7 @@ export default function VerticalHorseCard({ horse, rank }: VerticalHorseCardProp
             )}
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Overall Analysis</h3>
-            <p className="text-sm text-gray-700 mb-6" dangerouslySetInnerHTML={{ __html: personalizedInsight }} />
-          </div>
+          <p className="text-sm text-gray-700 mb-6" dangerouslySetInnerHTML={{ __html: personalizedInsight }} />
 
           <motion.button
             onClick={() => setIsFlipped(true)}
@@ -374,9 +261,6 @@ export default function VerticalHorseCard({ horse, rank }: VerticalHorseCardProp
           <div className="flex flex-col justify-between h-full">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Performance Analysis</h2>
-              <div className="w-20 h-20 rounded-full bg-[#DDAD69] flex items-center justify-center shadow-lg mb-6 mx-auto">
-                <span className="text-3xl font-bold text-white">{horse.score}</span>
-              </div>
 
               <PerformanceBar
                 value={horse.performance.winRate}

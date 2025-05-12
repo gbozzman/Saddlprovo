@@ -6,7 +6,7 @@ import { Search, Book, Trophy, Award } from "lucide-react"
 import { motion } from "framer-motion"
 import { AccountMenu } from "./AccountMenu"
 
-export function BottomNavBar() {
+export function BottomNavBarWithLeaderboard() {
   const pathname = usePathname()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState(pathname)

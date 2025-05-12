@@ -1,127 +1,42 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { RefreshCw, ArrowLeft, Star } from "lucide-react"
+import { RefreshCw, ArrowLeft, Star, Award, Target, TrendingUp, Cloud, Activity, Scale } from "lucide-react"
 import type { Horse } from "@/types/horse"
 import { format } from "date-fns"
-
-const silkPatterns = ["stripes", "stars", "solid", "checkered", "diamonds", "polkadots", "triangles", "zigzag"]
-
-const themeColors = [
-  "#DDAD69", // Gold
-  "#FFFFFF", // White
-  "#183531", // Dark Green
-  "#FF0000", // Red
-  "#0000FF", // Blue
-  "#FFA500", // Orange
-  "#FFFF00", // Yellow
-  "#FFC0CB", // Pink
-  "#800080", // Purple
-  "#A52A2A", // Brown
-]
-
-function SilkPlaceholder({
-  pattern,
-  primaryColor,
-  secondaryColor,
-}: { pattern: string; primaryColor: string; secondaryColor: string }) {
-  return (
-    <div
-      className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
-      style={{ backgroundColor: primaryColor }}
-    >
-      {pattern === "stripes" && (
-        <div className="w-full h-full">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-1/3"
-              style={{ backgroundColor: i % 2 === 0 ? secondaryColor : "transparent" }}
-            ></div>
-          ))}
-        </div>
-      )}
-      {pattern === "stars" && (
-        <div className="text-sm" style={{ color: secondaryColor }}>
-          ★
-        </div>
-      )}
-      {pattern === "solid" && <div className="w-full h-full" style={{ backgroundColor: secondaryColor }}></div>}
-      {pattern === "checkered" && (
-        <div className="w-full h-full grid grid-cols-3 grid-rows-3">
-          {[...Array(9)].map((_, i) => (
-            <div key={i} style={{ backgroundColor: i % 2 === 0 ? secondaryColor : "transparent" }}></div>
-          ))}
-        </div>
-      )}
-      {pattern === "diamonds" && (
-        <div className="w-full h-full relative">
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: secondaryColor, clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }}
-          ></div>
-        </div>
-      )}
-      {pattern === "polkadots" && (
-        <div className="w-full h-full relative">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full"
-              style={{
-                backgroundColor: secondaryColor,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-              }}
-            ></div>
-          ))}
-        </div>
-      )}
-      {pattern === "triangles" && (
-        <div className="w-full h-full relative">
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: secondaryColor, clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" }}
-          ></div>
-        </div>
-      )}
-      {pattern === "zigzag" && (
-        <div className="w-full h-full relative">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundColor: secondaryColor,
-              clipPath: "polygon(0 0, 100% 0, 100% 20%, 0 40%, 0 60%, 100% 80%, 100% 100%, 0 100%)",
-            }}
-          ></div>
-        </div>
-      )}
-    </div>
-  )
-}
+import Image from "next/image"
 
 interface VerticalHorseCardProps {
   horse: Horse
   rank: number
 }
 
-const PerformanceBar = ({ value, label, description }: { value: number; label: string; description?: string }) => (
-  <div className="mb-4">
-    <div className="flex justify-between items-center mb-1">
-      <span className="text-sm font-semibold text-gray-900">{label}</span>
+const PerformanceBar = ({
+  value,
+  label,
+  description,
+  icon,
+}: { value: number; label: string; description?: string; icon?: React.ReactNode }) => (
+  <div className="mb-5">
+    <div className="flex justify-between items-center mb-2">
+      <div className="flex items-center">
+        {icon}
+        <span className="text-sm font-semibold text-gray-900 ml-2">{label}</span>
+      </div>
       <span className="text-sm font-semibold text-gray-900">{value}/100</span>
     </div>
     <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
-      <div
-        className="absolute top-0 left-0 h-full rounded-full"
-        style={{
-          width: `${value}%`,
-          background: "linear-gradient(to right, #ff4444, #ffa500, #4caf50)",
-        }}
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${value}%` }}
+        transition={{ duration: 0.5 }}
+        className="performance-bar absolute top-0 left-0 h-full rounded-full"
       />
     </div>
-    {description && <p className="text-xs text-gray-600">{description}</p>}
+    {description && <p className="text-xs text-gray-700 mt-1">{description}</p>}
   </div>
 )
 
@@ -210,45 +125,19 @@ const getOrdinalSuffix = (n: number) => {
   return s[(v - 20) % 10] || s[v] || s[0]
 }
 
-interface Horse {
-  id: string
-  name: string
-  score: number
-  jockey: string
-  trainer: string
-  performance: {
-    winRate: number
-    jockeyPerformance: number
-    trainerForm: number
-    groundDurability: number
-    injuryHistory: number
-    ageAndWeight: number
-  }
-  form: string
-  recentPerformances?: {
-    date: string
-    position: number
-    trackCondition: string
-  }[]
-}
-
 export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
   const [isFlipped, setIsFlipped] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const horseSilk = useMemo(() => {
-    const patternIndex = Math.floor(Math.random() * silkPatterns.length)
-    const primaryColorIndex = Math.floor(Math.random() * themeColors.length)
-    let secondaryColorIndex
-    do {
-      secondaryColorIndex = Math.floor(Math.random() * themeColors.length)
-    } while (secondaryColorIndex === primaryColorIndex)
 
-    return {
-      pattern: silkPatterns[patternIndex],
-      primaryColor: themeColors[primaryColorIndex],
-      secondaryColor: themeColors[secondaryColorIndex],
-    }
-  }, [])
+  // Performance metric icons
+  const metricIcons = {
+    winRate: <Target className="w-4 h-4 text-gray-700" />,
+    jockeyPerformance: <Award className="w-4 h-4 text-gray-700" />,
+    trainerForm: <TrendingUp className="w-4 h-4 text-gray-700" />,
+    groundDurability: <Cloud className="w-4 h-4 text-gray-700" />,
+    injuryHistory: <Activity className="w-4 h-4 text-gray-700" />,
+    ageAndWeight: <Scale className="w-4 h-4 text-gray-700" />,
+  }
 
   useEffect(() => {
     // Check if the horse is in favorites when the component mounts
@@ -290,8 +179,13 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
   const personalizedInsight = generatePersonalizedInsight(horse)
 
   if (!horse) {
-    return <div className="text-white">No horse data available.</div>
+    return <div className="text-gray-900">No horse data available.</div>
   }
+
+  // Get jersey image based on horse ID
+  const jerseyNumber = (Number.parseInt(horse.id.replace(/\D/g, "")) % 6) + 1
+  const jerseyImage =
+    jerseyNumber <= 3 ? `/images/jerseys/jocko${jerseyNumber}.png` : `/images/jerseys/jock${jerseyNumber - 3}.png`
 
   return (
     <div className="w-full perspective-1000 mb-8">
@@ -304,7 +198,7 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
       >
         {/* Front of card */}
         <div
-          className={`w-full bg-white rounded-3xl p-6 ${!isFlipped ? "relative" : "absolute"} backface-hidden`}
+          className={`w-full premium-card p-6 ${!isFlipped ? "relative" : "absolute"} backface-hidden`}
           style={{
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
@@ -315,19 +209,28 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
             height: "100%",
             transform: "rotateY(0deg)",
             zIndex: isFlipped ? 0 : 1,
-            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-            border: "2px solid #DDAD69",
           }}
         >
           <div className="flex justify-between items-start mb-6">
             <div className="flex-grow">
               <div className="flex items-center gap-2 mb-2">
-                <SilkPlaceholder
-                  pattern={horseSilk.pattern}
-                  primaryColor={horseSilk.primaryColor}
-                  secondaryColor={horseSilk.secondaryColor}
-                />
-                <h2 className="text-2xl font-bold text-gray-900">{horse.name}</h2>
+                <div className="w-10 h-10 rounded-full overflow-hidden relative">
+                  <Image
+                    src={jerseyImage || "/placeholder.svg"}
+                    alt={`${horse.name}'s jersey`}
+                    width={40}
+                    height={40}
+                    className="object-cover"
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      const target = e.target as HTMLImageElement
+                      target.style.display = "none"
+                      target.parentElement!.style.backgroundColor = "#0000FF"
+                      target.parentElement!.innerHTML = `<span class="text-white font-bold">${horse.id.charAt(0)}</span>`
+                    }}
+                  />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 premium-heading">{horse.name}</h2>
                 <span
                   className={`text-sm font-semibold px-2 py-1 rounded-full text-white ${
                     rankColors[rank as keyof typeof rankColors] || "bg-gray-500"
@@ -336,12 +239,12 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
                   {getRankLabel(rank)}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">Jockey: {horse.jockey}</p>
-              <p className="text-sm text-gray-600">Trainer: {horse.trainer}</p>
-              <p className="text-sm text-gray-600">Form: {horse.form}</p>
+              <p className="text-sm text-gray-800 premium-subheading">Jockey: {horse.jockey}</p>
+              <p className="text-sm text-gray-800 premium-subheading">Trainer: {horse.trainer}</p>
+              <p className="text-sm text-gray-800 premium-subheading">Form: {horse.form}</p>
             </div>
             <div className="flex flex-col items-center ml-2">
-              <div className="w-16 h-16 rounded-full bg-[#DDAD69] flex items-center justify-center shadow-lg mb-1 relative">
+              <div className="w-16 h-16 gold-badge-3d rounded-full flex items-center justify-center shadow-lg mb-1 relative">
                 <span className="text-2xl font-bold text-white">{horse.score}</span>
                 <button
                   onClick={toggleFavorite}
@@ -355,29 +258,52 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
                   />
                 </button>
               </div>
-              <span className="text-xs font-medium text-gray-600">Score</span>
+              <span className="text-xs font-medium text-gray-800">Score</span>
             </div>
           </div>
           <div className="mb-6">
             {horse.performance && (
               <>
-                <PerformanceBar value={horse.performance.winRate} label="Win Rate" />
-                <PerformanceBar value={horse.performance.jockeyPerformance} label="Jockey Performance" />
-                <PerformanceBar value={horse.performance.trainerForm} label="Trainer Form" />
-                <PerformanceBar value={horse.performance.groundDurability} label="Ground Durability" />
-                <PerformanceBar value={horse.performance.injuryHistory} label="Injury History" />
-                <PerformanceBar value={horse.performance.ageAndWeight} label="Age & Weight" />
+                <PerformanceBar value={horse.performance.winRate} label="Win Rate" icon={metricIcons.winRate} />
+                <PerformanceBar
+                  value={horse.performance.jockeyPerformance}
+                  label="Jockey Performance"
+                  icon={metricIcons.jockeyPerformance}
+                />
+                <PerformanceBar
+                  value={horse.performance.trainerForm}
+                  label="Trainer Form"
+                  icon={metricIcons.trainerForm}
+                />
+                <PerformanceBar
+                  value={horse.performance.groundDurability}
+                  label="Ground Durability"
+                  icon={metricIcons.groundDurability}
+                />
+                <PerformanceBar
+                  value={horse.performance.injuryHistory}
+                  label="Injury History"
+                  icon={metricIcons.injuryHistory}
+                />
+                <PerformanceBar
+                  value={horse.performance.ageAndWeight}
+                  label="Age & Weight"
+                  icon={metricIcons.ageAndWeight}
+                />
               </>
             )}
           </div>
 
-          <p className="text-sm text-gray-700 mb-6" dangerouslySetInnerHTML={{ __html: personalizedInsight }} />
+          <p
+            className="text-sm text-gray-800 mb-6 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: personalizedInsight }}
+          />
 
           <motion.button
-            onClick={() => setIsFlipped(true)}
-            className="w-full py-3 text-base font-medium text-gray-600 hover:text-gray-900 flex items-center gap-2 justify-center border rounded-full hover:shadow-md transition-all duration-200 hover:bg-gray-50 active:bg-gray-100"
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
+            onClick={() => setIsFlipped(true)}
+            className="w-full py-3 text-base font-medium text-gray-800 hover:text-gray-900 flex items-center gap-2 justify-center border border-gray-200 rounded-xl hover:shadow-md transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 premium-subheading"
           >
             More Analytics
             <RefreshCw size={18} />
@@ -386,7 +312,7 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
 
         {/* Back of card */}
         <div
-          className={`w-full bg-white rounded-3xl p-6 ${isFlipped ? "relative" : "absolute"} backface-hidden`}
+          className={`w-full premium-card p-6 ${isFlipped ? "relative" : "absolute"} backface-hidden`}
           style={{
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
@@ -397,52 +323,58 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
             height: "100%",
             transform: "rotateY(180deg)",
             zIndex: isFlipped ? 1 : 0,
-            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-            border: "2px solid #DDAD69",
           }}
         >
           <div className="flex flex-col justify-between h-full">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Performance Analysis</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 premium-heading">Performance Analysis</h2>
 
               <PerformanceBar
                 value={horse.performance.winRate}
                 label="Win Rate"
                 description={`${horse.performance.winRate}% win rate in recent races`}
+                icon={metricIcons.winRate}
               />
 
               <PerformanceBar
                 value={horse.performance.jockeyPerformance}
                 label="Jockey Performance"
                 description={`${horse.jockey}'s recent performance and synergy with ${horse.name}`}
+                icon={metricIcons.jockeyPerformance}
               />
 
               <PerformanceBar
                 value={horse.performance.trainerForm}
                 label="Trainer Form"
                 description={`${horse.trainer}'s success rate and training strategies`}
+                icon={metricIcons.trainerForm}
               />
 
               <PerformanceBar
                 value={horse.performance.groundDurability}
                 label="Ground Durability"
                 description={`${horse.name}'s adaptability to various track conditions`}
+                icon={metricIcons.groundDurability}
               />
 
               <PerformanceBar
                 value={horse.performance.injuryHistory}
                 label="Injury History"
                 description={`Assessment of past injuries and recovery status`}
+                icon={metricIcons.injuryHistory}
               />
 
               <PerformanceBar
                 value={horse.performance.ageAndWeight}
                 label="Age & Weight"
                 description={`Optimal condition considering ${horse.name}'s age and weight`}
+                icon={metricIcons.ageAndWeight}
               />
             </div>
 
             <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 setIsFlipped(false)
                 // Add a small delay before allowing the card to be flipped again
@@ -450,9 +382,7 @@ export function VerticalHorseCard({ horse, rank }: VerticalHorseCardProps) {
                   setIsFlipped(false)
                 }, 300)
               }}
-              className="w-full py-3 text-base font-medium text-gray-600 hover:text-gray-900 flex items-center gap-2 justify-center border rounded-full hover:shadow-md transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 mt-6"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className="w-full py-3 text-base font-medium text-gray-800 hover:text-gray-900 flex items-center gap-2 justify-center border border-gray-200 rounded-xl hover:shadow-md transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 mt-6 premium-subheading"
             >
               Back to Overview
               <ArrowLeft size={18} />

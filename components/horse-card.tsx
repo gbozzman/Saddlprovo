@@ -1,14 +1,13 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { RefreshCw, ArrowLeft } from "lucide-react"
-import type { Horse } from "@/types/horse"
+import type { LiveRaceRunner } from "@/lib/supabase"
 
 interface HorseCardProps {
-  horse: Horse
+  horse: LiveRaceRunner
   onRemove: () => void
   onNext: () => void
   onPrevious: () => void
@@ -24,7 +23,7 @@ const PerformanceBar = ({ value, label, description }: { value: number; label: s
   <div className="mb-2">
     <div className="flex justify-between items-center mb-1">
       <span className="text-sm font-bold text-gray-900">{label}</span>
-      <span className="text-sm font-bold text-gray-900">{value}/100</span>
+      <span className="text-sm font-bold text-gray-900">{Math.round(value)}</span>
     </div>
     <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
       <div
@@ -101,6 +100,43 @@ export default function HorseCard({
     }
     return labels[rank as keyof typeof labels] || `${rank}th`
   }
+
+  // Get the SIE pillars
+  const getPerformancePillars = () => {
+    // Map the SIE pillars to the horse's scores
+    return [
+      {
+        name: "Form Momentum",
+        value: horse.scores?.["Form Momentum"] || 0,
+        description: "Recent race performance and form trajectory",
+      },
+      {
+        name: "Track Affinity",
+        value: horse.scores?.["Track Affinity"] || 0,
+        description: "Success at this course and going",
+      },
+      { name: "Stamina", value: horse.scores?.["Stamina"] || 0, description: "Endurance and staying power" },
+      {
+        name: "Distance Weight",
+        value: horse.scores?.["Distance Weight"] || 0,
+        description: "Suitability for race distance and weight carried",
+      },
+      { name: "Jockey Trainer", value: horse.scores?.["Jockey Trainer"] || 0, description: "Quality of connections" },
+      {
+        name: "Pace Suitability",
+        value: horse.scores?.["Pace Suitability"] || 0,
+        description: "Running style for this race",
+      },
+      {
+        name: "Environmental Impact",
+        value: horse.scores?.["Environmental Impact"] || 0,
+        description: "Adaptability to conditions",
+      },
+      { name: "Risk Factor", value: horse.scores?.["Risk Factor"] || 0, description: "Consistency and reliability" },
+    ]
+  }
+
+  const pillars = getPerformancePillars()
 
   return (
     <motion.div
@@ -185,7 +221,7 @@ export default function HorseCard({
                   <span className="text-xs text-gray-500">Silks</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-gray-900">{horse.name}</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{horse.horse_name}</h2>
                   <span
                     className={`text-xs font-semibold px-2 py-1 rounded-full text-white ${rankColors[rank as keyof typeof rankColors] || "bg-gray-500"}`}
                   >
@@ -207,18 +243,15 @@ export default function HorseCard({
             </div>
             <div className="flex flex-col items-center ml-2">
               <div className="w-14 h-14 rounded-full bg-[#DDAD69] flex items-center justify-center shadow-lg mb-1">
-                <span className="text-xl font-bold text-white">{horse.score}</span>
+                <span className="text-xl font-bold text-white">{Math.round(horse.normalized_score)}</span>
               </div>
-              <span className="text-xs font-medium text-gray-600">Score</span>
+              <span className="text-xs font-medium text-gray-600">SHS</span>
             </div>
           </div>
           <div className="mb-4">
-            <PerformanceBar value={horse.performance.winRate} label="Win Rate" />
-            <PerformanceBar value={horse.performance.jockeyPerformance} label="Jockey Performance" />
-            <PerformanceBar value={horse.performance.trainerForm} label="Trainer Form" />
-            <PerformanceBar value={horse.performance.groundDurability} label="Ground Durability" />
-            <PerformanceBar value={horse.performance.injuryHistory} label="Injury History" />
-            <PerformanceBar value={horse.performance.ageAndWeight} label="Age & Weight" />
+            {pillars.slice(0, 6).map((pillar) => (
+              <PerformanceBar key={pillar.name} value={pillar.value} label={pillar.name} />
+            ))}
           </div>
 
           <button
@@ -246,29 +279,25 @@ export default function HorseCard({
               <div className="flex justify-between items-start mb-3">
                 <h2 className="text-lg font-bold text-gray-900">Performance Analysis</h2>
                 <div className="w-12 h-12 rounded-full bg-[#DDAD69] flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-lg">{horse.score}</span>
+                  <span className="text-white font-bold text-lg">{Math.round(horse.normalized_score)}</span>
                 </div>
               </div>
 
-              <PerformanceBar value={65} label="Win Rate" description="82% win rate in last 20 races" />
+              {pillars.map((pillar) => (
+                <PerformanceBar
+                  key={pillar.name}
+                  value={pillar.value}
+                  label={pillar.name}
+                  description={pillar.description}
+                />
+              ))}
 
-              <PerformanceBar
-                value={65}
-                label="Jockey Performance"
-                description="Multiple victories and record performances"
-              />
-
-              <PerformanceBar value={90} label="Trainer Form" description="Improved endurance and race strategy" />
-
-              <PerformanceBar
-                value={45}
-                label="Ground Durability"
-                description="Adaptable to various track conditions"
-              />
-
-              <PerformanceBar value={65} label="Injury History" description="Minimal injuries, excellent recovery" />
-
-              <PerformanceBar value={55} label="Age & Weight" description="Peak physical condition at 5 years" />
+              <div className="mt-3 pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-700 font-medium">{horse.label}</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Form: {Array.isArray(horse.form) ? horse.form.join("-") : horse.form}
+                </p>
+              </div>
             </div>
 
             <div className="absolute bottom-4 right-4">

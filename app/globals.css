@@ -6,6 +6,16 @@
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 24, 53, 49;
   --background-end-rgb: 13, 30, 28;
+
+  /* Premium UI colors */
+  --cream-light: #fff8e7;
+  --cream: #f5edd7;
+  --ivory: #fffff0;
+  --gold-light: #ddad69;
+  --gold: #d4af37;
+  --gold-dark: #996515;
+  --slate-green: #002b36;
+  --slate-green-light: #073642;
 }
 
 body {
@@ -20,6 +30,125 @@ body {
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 24, 53, 49;
   --background-end-rgb: 13, 30, 28;
+}
+
+/* Force black text on inputs */
+input,
+select,
+textarea {
+  color: black !important;
+  background-color: white !important;
+}
+
+/* Force black text on dropdowns */
+.dropdown-item {
+  color: black !important;
+}
+
+/* Premium card styling */
+.premium-card {
+  background: linear-gradient(145deg, var(--cream-light), var(--ivory));
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.premium-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 1.5rem;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.5);
+}
+
+.premium-card-dark {
+  background: linear-gradient(145deg, var(--slate-green), var(--slate-green-light));
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.premium-card-dark::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 1.5rem;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.5);
+}
+
+.premium-heading {
+  font-family: "Playfair Display", serif;
+  letter-spacing: 0.02em;
+}
+
+.premium-subheading {
+  font-family: "Cormorant", serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.9em;
+}
+
+.gold-badge {
+  background: linear-gradient(145deg, var(--gold-light), var(--gold));
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 -2px 0 rgba(0, 0, 0, 0.1),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.performance-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #ff4444, #ffa500, #4caf50);
+  position: relative;
+  overflow: hidden;
+}
+
+.performance-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.horse-row {
+  transition: all 0.3s ease;
+}
+
+.horse-row:hover,
+.horse-row:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.1);
 }
 
 @layer utilities {
@@ -249,4 +378,50 @@ body {
 
 .animate-border-shimmer {
   animation: border-shimmer 3s linear infinite;
+}
+
+/* 3D Gold Badge */
+.gold-badge-3d {
+  background: linear-gradient(145deg, #ddad69, #d4af37);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1), inset 0 -2px 0 rgba(0, 0, 0, 0.1),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.gold-badge-3d::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 100%);
+  pointer-events: none;
+}
+
+/* Accordion animation */
+.accordion-enter {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.3s ease;
+}
+
+.accordion-enter-active {
+  max-height: 1000px;
+  opacity: 1;
+}
+
+.accordion-exit {
+  max-height: 1000px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.3s ease;
+}
+
+.accordion-exit-active {
+  max-height: 0;
+  opacity: 0;
 }

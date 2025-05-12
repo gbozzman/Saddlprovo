@@ -101,13 +101,7 @@ export default function CreateAccountPage() {
       <div className="w-full max-w-md space-y-8 relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center space-y-4">
-          <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-01-15%20at%2018.21.08-PVNqphs6dbCNv6JOsEM0SpYficsB8n.png"
-            alt="SaddlePro Logo"
-            width={200}
-            height={80}
-            className="w-48"
-          />
+          <Image src="/images/saddlepro-logo-new.png" alt="SaddlePro Logo" width={200} height={80} className="w-48" />
           <h1 className="text-2xl font-bold text-white">Welcome to SaddlePro</h1>
           <h2 className="text-xl font-semibold text-[#DDAD69]">Create Your Account</h2>
         </div>
